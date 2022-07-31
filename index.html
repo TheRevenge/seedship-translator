@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <title>Traducteur Seedship</title>
+        <style>
+            body {
+                font-family: 'Courier New', Courier, monospace;
+            }
+            form, #result {
+                display:flex;
+                flex-direction: column;
+                row-gap: 20px;
+            }
+
+            #comparaison {
+                display: flex;
+            }
+            #comparaison textarea {
+                flex: auto;
+            }
+            #comparaison textarea + textarea {
+                margin-left: 20px;
+            }
+
+            #resultJS {
+                background-color: black;
+                border: solid 2px lightgray;
+                color: white;
+                padding: 8px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Traducteur Seedship</h1>
+        <form id="translating" action="#">
+            <h4>Pour traduire du texte, copier le tableau JS (seulement ce qui a entre les [] compris). <br>Une vérification manuelle aura lieu.</h4>
+            <label for="text">Texte à traduire (tableau JS):</label>
+            <textarea id="text" rows="10" cols="50"></textarea>
+            <input type="submit" value="Traduire">
+        </form>
+        <form id="checking" action="#">
+            <h4>Comparaison avant/après.<br> Le tableau JS final sera affiché après que toutes les entrées soient passées</h4>
+            <div id="comparaison">
+                <textarea id="beforeText"></textarea>
+                <textarea id="afterText"></textarea>
+            </div>
+            <input type="submit" value="Vérifier">
+        </form>
+        <div id="result">
+            <h4>Résultat:</h4>
+            <span id="resultJS"></span>
+            <input type="button" id="copy" value="Copier">
+            <input type="button" id="restart" value="Recommencer">
+        </div>
+    </body>
+    <script>
+        let translationArray = [];
+        let originalText;
+        let approvedArray = [];
+        let currentProgress = 0;
+
+        // Translate text then calls back
+        // Using reverso website. NOT AN API, YOU MIGHT GET IP BANNED.
+        // TODO: find a free translation API with no/acceptable limit
+        function translateText(obj, callback) {
+            fetch("https://api.reverso.net/translate/v1/translation", {
+                "headers": {
+                    "accept": "application/json, text/plain, */*",
+                    "content-type": "application/json",
+                    "x-reverso-origin": "translation.web"
+                },
+                "body": JSON.stringify({
+                    "format":"text",
+                    "from":"eng",
+                    "to":"fra",
+                    "input":obj.text,
+                    "options":{
+                        "sentenceSplitter":true,
+                        "origin":"translation.web",
+                        "contextResults":false,
+                        "languageDetection":true
+                    }
+                }),
+                "method": "POST",
+            }).then((data) => {
+                const reader = data.body.getReader();
+                let charsReceived = 0;
+                let result = "";
+
+                // read() returns a promise that resolves
+                // when a value has been received
+                reader.read().then(function processText({ done, value }) {
+                    // Result objects contain two properties:
+                    // done  - true if the stream has already given you all its data.
+                    // value - some data. Always undefined when done is true.
+                    if (done) {
+                        const parsedResult = JSON.parse(result);
+                        callback({"text":parsedResult.translation[0], "index":obj.index});
+
+                        return;
+                    }
+
+                    charsReceived += value.length;
+                    const chunk = value;
+
+                    result += new TextDecoder().decode(chunk);
+
+                    // Read some more, and call this function again
+                    return reader.read().then(processText);
+                }); 
+            })
+        }
+
+        document.querySelector("#checking").style.display = "none";
+        document.querySelector("#result").style.display = "none";
+
+        // When the form is submitted, translate the text and prepare for manual approval
+        document.querySelector("#translating").addEventListener("submit", function(e) {
+            e.preventDefault();
+            document.querySelector("#text").value = document.querySelector("#text").value.replace("\n", "");
+            
+            try {
+                originalText = JSON.parse(document.querySelector("#text").value);
+            } catch (error) {
+                alert("Erreur lors de la conversion du tableau JS! \nVeuillez vérifier que vous avez bien pris le code entre les []. \nLe dernier élément ne peut pas avoir de virgule.");
+                return;
+            }
+            
+            if (!typeof(originalText) === "array") return alert("Le texte doit être un tableau JS");
+
+            originalText.forEach((element, index) => {
+                translateText({"text":element, "index":index}, (translationObj) => {
+                    console.log("Translation result: ", translationArray.length, originalText.length);
+                    translationArray[translationObj.index] = translationObj.text;
+
+                    if (translationArray.length == originalText.length) {
+                        document.querySelector("#translating").style.display = "none";
+                        document.querySelector("#checking").style.display = "flex";
+
+                        document.querySelector("#beforeText").value = originalText[0];
+                        document.querySelector("#afterText").value = translationArray[0];
+                    }
+                });
+            });
+        });
+
+        // When the form is submitted, add the current element to approved list and check if all are approved
+        document.querySelector("#checking").addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            currentProgress++;
+            if (currentProgress + 1 > originalText.length) {
+                // Reached end of array
+                alert("Fin de la traduction!");
+                document.querySelector("#checking").style.display = "none";
+                document.querySelector("#result").style.display = "block";
+
+                document.querySelector("#resultJS").innerHTML = JSON.stringify(approvedArray);
+                document.querySelector("#resultJS").innerHTML = document.querySelector("#resultJS").innerHTML.replaceAll(",", ",\n").replaceAll("[", "[\n").replaceAll("]", "\n]");
+                // Sets up copy and restart button
+                document.querySelector("#copy").addEventListener("click", function(e) {
+                    e.preventDefault();
+                    navigator.clipboard.writeText(document.querySelector("#resultJS").innerHTML);
+                });
+                document.querySelector("#restart").addEventListener("click", function(e) {
+                    e.preventDefault();
+                    window.location.reload(true);
+                });
+                return;
+            }
+
+            approvedArray.push(document.querySelector("#afterText").value);
+            document.querySelector("#beforeText").value = originalText[currentProgress];
+            document.querySelector("#afterText").value = translationArray[currentProgress];
+        });
+        
+    </script>
+</html>
