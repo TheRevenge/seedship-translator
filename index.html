@@ -156,7 +156,7 @@
                 document.querySelector("#result").style.display = "block";
 
                 document.querySelector("#resultJS").innerHTML = JSON.stringify(approvedArray);
-                document.querySelector("#resultJS").innerHTML = document.querySelector("#resultJS").innerHTML.replaceAll(",", ",\n").replaceAll("[", "[\n").replaceAll("]", "\n]");
+                document.querySelector("#resultJS").innerHTML = document.querySelector("#resultJS").innerHTML.replaceAll("\",", "\",\n").replaceAll("[", "[\n").replaceAll("]", "\n]");
                 // Sets up copy and restart button
                 document.querySelector("#copy").addEventListener("click", function(e) {
                     e.preventDefault();
