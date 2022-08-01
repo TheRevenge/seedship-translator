@@ -155,7 +155,7 @@
                 // Reached end of array
                 alert("Fin de la traduction!");
                 document.querySelector("#checking").style.display = "none";
-                document.querySelector("#result").style.display = "block";
+                document.querySelector("#result").style.display = "flex";
 
                 document.querySelector("#resultJS").innerHTML = JSON.stringify(approvedArray);
                 document.querySelector("#resultJS").innerHTML = document.querySelector("#resultJS").innerHTML.replaceAll("\",", "\",\n").replaceAll("[", "[\n").replaceAll("]", "\n]");
