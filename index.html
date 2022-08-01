@@ -41,8 +41,8 @@
         <form id="checking" action="#">
             <h4>Comparaison avant/après.<br> Le tableau JS final sera affiché après que toutes les entrées soient passées</h4>
             <div id="comparaison">
-                <textarea id="beforeText"></textarea>
-                <textarea id="afterText"></textarea>
+                <textarea id="beforeText" rows="5"></textarea>
+                <textarea id="afterText" rows="5"></textarea>
             </div>
             <input type="submit" value="Vérifier">
         </form>
@@ -148,7 +148,9 @@
         document.querySelector("#checking").addEventListener("submit", function(e) {
             e.preventDefault();
 
+            approvedArray.push(document.querySelector("#afterText").value);
             currentProgress++;
+            
             if (currentProgress + 1 > originalText.length) {
                 // Reached end of array
                 alert("Fin de la traduction!");
@@ -169,7 +171,6 @@
                 return;
             }
 
-            approvedArray.push(document.querySelector("#afterText").value);
             document.querySelector("#beforeText").value = originalText[currentProgress];
             document.querySelector("#afterText").value = translationArray[currentProgress];
         });
